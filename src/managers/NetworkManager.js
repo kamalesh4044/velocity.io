@@ -5,7 +5,11 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 export class NetworkManager {
     constructor(scene) {
         this.scene = scene;
-        this.socket = io('ws://localhost:3000');
+        
+        // If running Vite dev server locally, connect to port 3000.
+        // If deployed on Render, connect dynamically to itself!
+        const isLocalDev = window.location.port === '5173';
+        this.socket = isLocalDev ? io('ws://localhost:3000') : io();
         this.remotePlayers = {};
         this.mixers = [];
         this.setupListeners();
