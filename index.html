@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Velocity.io</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        canvas { display: block; }
+        
+        /* The magical dot in the center */
+        #crosshair {
+            position: absolute; top: 50%; left: 50%; width: 6px; height: 6px;
+            background: #00ff88; transform: translate(-50%, -50%); border-radius: 50%;
+            box-shadow: 0 0 10px #00ff88; z-index: 10;
+        }
+        
+        /* Basic HUD */
+        #ui { position: absolute; top: 20px; left: 20px; pointer-events: none; }
+        .logo { font-size: 32px; font-weight: 900; font-style: italic; letter-spacing: 2px; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
+        .logo span { color: #00ff88; }
+        .instructions { margin-top: 10px; font-size: 14px; color: #aaa; }
+
+        /* Deploy Screen */
+        #click-to-play {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, rgba(20,20,30,0.8) 0%, rgba(0,0,0,0.95) 100%);
+            display: flex; align-items: center; justify-content: center; flex-direction: column;
+            cursor: pointer; z-index: 100; backdrop-filter: blur(5px); transition: opacity 0.3s;
+        }
+        .deploy-btn {
+            padding: 15px 40px; font-size: 24px; font-weight: bold; font-style: italic;
+            background: #00ff88; color: #000; border: none; border-radius: 4px;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.5); cursor: pointer; text-transform: uppercase;
+            transition: all 0.2s;
+        }
+        .deploy-btn:hover { transform: scale(1.05); background: #fff; box-shadow: 0 0 30px #fff; }
+    </style>
+</head>
+<body>
+    <div id="click-to-play">
+        <h1 class="logo" style="font-size: 72px; margin-bottom: 40px;">VELOCITY<span>.IO</span></h1>
+        <button class="deploy-btn">DEPLOY</button>
+    </div>
+    
+    <div id="ui">
+        <div class="logo">VELOCITY<span>.IO</span></div>
+        <div class="instructions">WASD to move | SPACE to jump | SHIFT to sprint</div>
+        <div id="player-count" style="position:fixed; top:20px; right:20px; color:#00ff88; font-size:24px; font-weight:bold; font-style:italic;">PLAYERS: 1</div>
+    </div>
+    <div id="crosshair"></div>
+    <canvas id="game-canvas"></canvas>
+    
+    <script>
+      window.onerror = (msg, url, line, col, error) => {
+        document.getElementById('ui').innerHTML += `<div style="color:red; font-size:20px; font-weight:bold; background:black; padding:10px; z-index:9999; position:relative;">ERROR: ${msg}</div>`;
+      };
+      window.addEventListener('unhandledrejection', (e) => {
+        document.getElementById('ui').innerHTML += `<div style="color:red; font-size:20px; font-weight:bold; background:black; padding:10px; z-index:9999; position:relative;">PROMISE ERROR: ${e.reason}</div>`;
+      });
+    </script>
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>
