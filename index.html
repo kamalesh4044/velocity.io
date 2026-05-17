@@ -3,60 +3,285 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Velocity.io</title>
+    <title>Velocity.io — Browser FPS</title>
+    <meta name="description" content="Velocity.io is a fast-paced multiplayer browser FPS game with weapon switching, health, and smooth combat.">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; overflow: hidden; background: #000; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { overflow: hidden; background: #000; color: white; font-family: 'Rajdhani', sans-serif; }
         canvas { display: block; }
-        
-        /* The magical dot in the center */
-        #crosshair {
-            position: absolute; top: 50%; left: 50%; width: 6px; height: 6px;
-            background: #00ff88; transform: translate(-50%, -50%); border-radius: 50%;
-            box-shadow: 0 0 10px #00ff88; z-index: 10;
-        }
-        
-        /* Basic HUD */
-        #ui { position: absolute; top: 20px; left: 20px; pointer-events: none; }
-        .logo { font-size: 32px; font-weight: 900; font-style: italic; letter-spacing: 2px; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
-        .logo span { color: #00ff88; }
-        .instructions { margin-top: 10px; font-size: 14px; color: #aaa; }
 
-        /* Deploy Screen */
-        #click-to-play {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle, rgba(20,20,30,0.8) 0%, rgba(0,0,0,0.95) 100%);
-            display: flex; align-items: center; justify-content: center; flex-direction: column;
-            cursor: pointer; z-index: 100; backdrop-filter: blur(5px); transition: opacity 0.3s;
+        /* ===== CROSSHAIR ===== */
+        #crosshair {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10; pointer-events: none;
         }
+        .cross-line {
+            position: absolute; background: rgba(255,255,255,0.9);
+        }
+        .cross-top { width: 2px; height: 12px; left: -1px; top: -18px; }
+        .cross-bot { width: 2px; height: 12px; left: -1px; top: 6px; }
+        .cross-left { width: 12px; height: 2px; top: -1px; left: -18px; }
+        .cross-right { width: 12px; height: 2px; top: -1px; left: 6px; }
+        .cross-dot { width: 3px; height: 3px; background: #fff; border-radius: 50%; position: absolute; top: -1.5px; left: -1.5px; }
+
+        /* ===== HIT MARKER ===== */
+        #hitmarker {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); z-index: 11;
+            pointer-events: none; opacity: 0; transition: opacity 0.1s;
+        }
+        #hitmarker.show { opacity: 1; }
+        .hm-line { position: absolute; background: #fff; }
+        .hm-1 { width: 2px; height: 10px; transform: rotate(45deg); top: -12px; left: -1px; }
+        .hm-2 { width: 2px; height: 10px; transform: rotate(-45deg); top: -12px; left: -1px; }
+        .hm-3 { width: 2px; height: 10px; transform: rotate(45deg); top: 2px; left: -1px; }
+        .hm-4 { width: 2px; height: 10px; transform: rotate(-45deg); top: 2px; left: -1px; }
+        #hitmarker.kill .hm-line { background: #ff3333; }
+
+        /* ===== DAMAGE VIGNETTE ===== */
+        #damage-vignette {
+            position: fixed; inset: 0; z-index: 9;
+            pointer-events: none; opacity: 0;
+            background: radial-gradient(ellipse at center, transparent 40%, rgba(255,0,0,0.4) 100%);
+            transition: opacity 0.15s;
+        }
+
+        /* ===== DEPLOY SCREEN ===== */
+        #click-to-play {
+            position: absolute; inset: 0;
+            background: radial-gradient(circle, rgba(20,20,30,0.85) 0%, rgba(0,0,0,0.97) 100%);
+            display: flex; align-items: center; justify-content: center; flex-direction: column;
+            cursor: pointer; z-index: 100; backdrop-filter: blur(8px);
+            transition: opacity 0.4s;
+        }
+        .deploy-title {
+            font-family: 'Orbitron', sans-serif; font-size: 72px; font-weight: 900;
+            letter-spacing: 4px; margin-bottom: 10px;
+            background: linear-gradient(135deg, #00ff88, #00ccff);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-shadow: none; filter: drop-shadow(0 0 20px rgba(0,255,136,0.3));
+        }
+        .deploy-sub { color: #667; font-size: 16px; margin-bottom: 40px; letter-spacing: 3px; text-transform: uppercase; }
         .deploy-btn {
-            padding: 15px 40px; font-size: 24px; font-weight: bold; font-style: italic;
-            background: #00ff88; color: #000; border: none; border-radius: 4px;
-            box-shadow: 0 0 20px rgba(0, 255, 136, 0.5); cursor: pointer; text-transform: uppercase;
+            padding: 16px 50px; font-size: 22px; font-weight: 700; font-family: 'Orbitron', sans-serif;
+            background: linear-gradient(135deg, #00ff88, #00ccff); color: #000; border: none; border-radius: 6px;
+            box-shadow: 0 0 30px rgba(0,255,136,0.4); cursor: pointer; text-transform: uppercase;
+            transition: all 0.25s; letter-spacing: 2px;
+        }
+        .deploy-btn:hover { transform: scale(1.08); box-shadow: 0 0 50px rgba(0,255,136,0.7); }
+
+        /* ===== TOP HUD ===== */
+        #top-hud {
+            position: fixed; top: 15px; left: 20px; z-index: 10; pointer-events: none;
+        }
+        .game-logo {
+            font-family: 'Orbitron', sans-serif; font-size: 26px; font-weight: 900;
+            background: linear-gradient(135deg, #00ff88, #00ccff);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .hud-controls {
+            font-size: 13px; color: #556; margin-top: 4px; letter-spacing: 1px;
+        }
+        #player-count {
+            position: fixed; top: 18px; right: 20px; z-index: 10;
+            color: #00ff88; font-family: 'Orbitron', sans-serif; font-size: 18px; font-weight: 700;
+            pointer-events: none;
+        }
+
+        /* ===== BOTTOM HUD ===== */
+        #bottom-hud {
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 10;
+            pointer-events: none; padding: 0 20px 15px;
+            display: flex; justify-content: space-between; align-items: flex-end;
+        }
+
+        /* Health Bar */
+        .health-section { display: flex; align-items: center; gap: 10px; }
+        .health-icon { font-size: 22px; }
+        .health-bar-bg {
+            width: 220px; height: 18px; background: rgba(255,255,255,0.08);
+            border-radius: 3px; border: 1px solid rgba(255,255,255,0.1); overflow: hidden;
+        }
+        .health-bar-fill {
+            height: 100%; background: linear-gradient(90deg, #00ff88, #00cc66);
+            transition: width 0.3s ease; border-radius: 2px;
+            box-shadow: 0 0 8px rgba(0,255,136,0.4);
+        }
+        .health-bar-fill.low { background: linear-gradient(90deg, #ff4444, #ff8800); box-shadow: 0 0 8px rgba(255,68,68,0.4); }
+        .health-text {
+            font-family: 'Orbitron', sans-serif; font-size: 20px; font-weight: 700;
+            color: #fff; min-width: 40px; text-align: right;
+        }
+
+        /* Ammo */
+        .ammo-section { text-align: right; }
+        .weapon-name {
+            font-family: 'Orbitron', sans-serif; font-size: 12px; font-weight: 400;
+            color: #556; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 2px;
+        }
+        .ammo-count {
+            font-family: 'Orbitron', sans-serif; font-size: 36px; font-weight: 900;
+            color: #fff; line-height: 1;
+        }
+        .ammo-count span { color: #556; font-size: 20px; font-weight: 400; }
+
+        /* Weapon Slots */
+        .weapon-slots {
+            position: fixed; bottom: 60px; right: 20px; z-index: 10;
+            display: flex; gap: 6px; pointer-events: none;
+        }
+        .weapon-slot {
+            padding: 6px 14px; font-size: 12px; font-family: 'Orbitron', sans-serif;
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 4px; color: #556; letter-spacing: 1px;
             transition: all 0.2s;
         }
-        .deploy-btn:hover { transform: scale(1.05); background: #fff; box-shadow: 0 0 30px #fff; }
+        .weapon-slot.active {
+            background: rgba(0,255,136,0.1); border-color: #00ff88;
+            color: #00ff88; box-shadow: 0 0 10px rgba(0,255,136,0.2);
+        }
+        .weapon-slot .key { color: #333; font-size: 10px; margin-right: 4px; }
+
+        /* Kill Feed */
+        #kill-feed {
+            position: fixed; top: 50px; right: 20px; z-index: 10;
+            pointer-events: none; display: flex; flex-direction: column; gap: 4px;
+            max-width: 300px;
+        }
+        .kill-entry {
+            padding: 5px 12px; font-size: 13px;
+            background: rgba(0,0,0,0.6); border-radius: 4px;
+            animation: killFadeIn 0.3s ease, killFadeOut 0.5s ease 3.5s forwards;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .kill-entry .killer { color: #00ff88; font-weight: 600; }
+        .kill-entry .killed { color: #ff4444; font-weight: 600; }
+        .kill-entry .weapon-icon { color: #888; font-size: 11px; }
+        @keyframes killFadeIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes killFadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+        /* Death Screen */
+        #death-screen {
+            position: fixed; inset: 0; z-index: 50;
+            background: rgba(0,0,0,0.7); display: none;
+            align-items: center; justify-content: center; flex-direction: column;
+            backdrop-filter: blur(4px);
+        }
+        #death-screen.show { display: flex; }
+        .death-text {
+            font-family: 'Orbitron', sans-serif; font-size: 48px; font-weight: 900;
+            color: #ff3333; margin-bottom: 10px; letter-spacing: 4px;
+        }
+        .death-killer { color: #aaa; font-size: 18px; margin-bottom: 30px; }
+        .respawn-timer {
+            font-family: 'Orbitron', sans-serif; font-size: 24px; color: #00ff88;
+        }
+
+        /* Score */
+        #score-display {
+            position: fixed; top: 50px; left: 20px; z-index: 10;
+            pointer-events: none; font-family: 'Orbitron', sans-serif;
+        }
+        .score-line { font-size: 14px; color: #667; margin-top: 2px; }
+        .score-line span { color: #fff; font-weight: 700; }
+
+        /* Reload bar */
+        #reload-bar {
+            position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+            width: 200px; height: 6px; z-index: 10;
+            background: rgba(255,255,255,0.1); border-radius: 3px;
+            overflow: hidden; display: none;
+        }
+        #reload-bar.show { display: block; }
+        .reload-fill {
+            height: 100%; width: 0%; background: #00ff88; border-radius: 3px;
+            transition: width 0.05s linear;
+        }
     </style>
 </head>
 <body>
+    <!-- Deploy/Start Screen -->
     <div id="click-to-play">
-        <h1 class="logo" style="font-size: 72px; margin-bottom: 40px;">VELOCITY<span>.IO</span></h1>
+        <div class="deploy-title">VELOCITY.IO</div>
+        <div class="deploy-sub">Fast-Paced Browser FPS</div>
         <button class="deploy-btn">DEPLOY</button>
     </div>
-    
-    <div id="ui">
-        <div class="logo">VELOCITY<span>.IO</span></div>
-        <div class="instructions">WASD to move | SPACE to jump | SHIFT to sprint</div>
-        <div id="player-count" style="position:fixed; top:20px; right:20px; color:#00ff88; font-size:24px; font-weight:bold; font-style:italic;">PLAYERS: 1</div>
+
+    <!-- Game HUD -->
+    <div id="top-hud">
+        <div class="game-logo">VELOCITY.IO</div>
+        <div class="hud-controls">WASD move | SPACE jump | SHIFT sprint | C slide | R reload | 1-3 weapons</div>
     </div>
-    <div id="crosshair"></div>
+    <div id="player-count">PLAYERS: 1</div>
+
+    <div id="score-display">
+        <div class="score-line">K: <span id="kills-count">0</span></div>
+        <div class="score-line">D: <span id="deaths-count">0</span></div>
+    </div>
+
+    <!-- Crosshair -->
+    <div id="crosshair">
+        <div class="cross-line cross-top"></div>
+        <div class="cross-line cross-bot"></div>
+        <div class="cross-line cross-left"></div>
+        <div class="cross-line cross-right"></div>
+        <div class="cross-dot"></div>
+    </div>
+
+    <!-- Hit Marker -->
+    <div id="hitmarker">
+        <div class="hm-line hm-1"></div>
+        <div class="hm-line hm-2"></div>
+        <div class="hm-line hm-3"></div>
+        <div class="hm-line hm-4"></div>
+    </div>
+
+    <!-- Damage Vignette -->
+    <div id="damage-vignette"></div>
+
+    <!-- Bottom HUD -->
+    <div id="bottom-hud">
+        <div class="health-section">
+            <div class="health-icon">❤</div>
+            <div class="health-bar-bg"><div class="health-bar-fill" id="health-fill"></div></div>
+            <div class="health-text" id="health-text">100</div>
+        </div>
+        <div class="ammo-section">
+            <div class="weapon-name" id="weapon-name">ASSAULT RIFLE</div>
+            <div class="ammo-count"><span id="ammo-current">30</span> <span>/ <span id="ammo-reserve">120</span></span></div>
+        </div>
+    </div>
+
+    <!-- Weapon Slots -->
+    <div class="weapon-slots">
+        <div class="weapon-slot active" id="slot-1"><span class="key">1</span> AR</div>
+        <div class="weapon-slot" id="slot-2"><span class="key">2</span> SMG</div>
+        <div class="weapon-slot" id="slot-3"><span class="key">3</span> SHOTGUN</div>
+    </div>
+
+    <!-- Kill Feed -->
+    <div id="kill-feed"></div>
+
+    <!-- Reload Bar -->
+    <div id="reload-bar"><div class="reload-fill" id="reload-fill"></div></div>
+
+    <!-- Death Screen -->
+    <div id="death-screen">
+        <div class="death-text">ELIMINATED</div>
+        <div class="death-killer" id="death-killer-text">by Player</div>
+        <div class="respawn-timer">Respawning in <span id="respawn-timer">3</span>s</div>
+    </div>
+
     <canvas id="game-canvas"></canvas>
-    
+
     <script>
       window.onerror = (msg, url, line, col, error) => {
-        document.getElementById('ui').innerHTML += `<div style="color:red; font-size:20px; font-weight:bold; background:black; padding:10px; z-index:9999; position:relative;">ERROR: ${msg}</div>`;
+        console.error('ERROR:', msg, url, line);
       };
       window.addEventListener('unhandledrejection', (e) => {
-        document.getElementById('ui').innerHTML += `<div style="color:red; font-size:20px; font-weight:bold; background:black; padding:10px; z-index:9999; position:relative;">PROMISE ERROR: ${e.reason}</div>`;
+        console.error('PROMISE ERROR:', e.reason);
       });
     </script>
     <script type="module" src="/src/main.js"></script>

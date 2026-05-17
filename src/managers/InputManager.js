@@ -2,7 +2,9 @@ export class InputManager {
     constructor() {
         this.keys = {
             KeyW: false, KeyA: false, KeyS: false, KeyD: false,
-            Space: false, ShiftLeft: false, KeyC: false // C for sliding
+            Space: false, ShiftLeft: false, KeyC: false,
+            KeyR: false, // Reload
+            Digit1: false, Digit2: false, Digit3: false // Weapon slots
         };
         this.mouse = { left: false, right: false };
         this.movement = { x: 0, y: 0 }; 
@@ -18,6 +20,9 @@ export class InputManager {
         document.addEventListener('mousedown', (e) => this.onMouseDown(e));
         document.addEventListener('mouseup', (e) => this.onMouseUp(e));
         document.addEventListener('contextmenu', e => e.preventDefault());
+
+        // Mouse wheel for weapon switching
+        document.addEventListener('wheel', (e) => this.onWheel(e));
     }
 
     onKeyDown(e) { 
@@ -49,6 +54,18 @@ export class InputManager {
         if (e.button === 2) this.mouse.right = false;
     }
 
+    onWheel(e) {
+        // Scroll up/down to cycle weapons
+        if (!this.isLocked) return;
+        if (e.deltaY < 0) {
+            // Scroll up - previous weapon
+            this._scrollDir = -1;
+        } else {
+            // Scroll down - next weapon
+            this._scrollDir = 1;
+        }
+    }
+
     lockPointer() {
         document.body.requestPointerLock();
     }
@@ -59,6 +76,8 @@ export class InputManager {
         if (!this.isLocked && this.onUnlock) {
             // Unlocked, zero out keys so we don't keep running
             for(let key in this.keys) this.keys[key] = false;
+            this.mouse.left = false;
+            this.mouse.right = false;
             this.onUnlock();
         }
     }
@@ -69,5 +88,11 @@ export class InputManager {
         this.movement.x = 0;
         this.movement.y = 0;
         return mov;
+    }
+
+    consumeScrollDir() {
+        const dir = this._scrollDir || 0;
+        this._scrollDir = 0;
+        return dir;
     }
 }
